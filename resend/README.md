@@ -55,6 +55,19 @@ resend --api-key re_other_key emails send …
 Priority chain (highest wins): `--api-key` flag → `RESEND_API_KEY` env
 var → `~/.config/resend/credentials.json` (from `resend login`).
 
+### Non-interactive login (for agents / CI)
+
+The bare `resend login` opens a browser flow and blocks on user input,
+which fails in agent contexts. Pass the key directly to skip the
+browser:
+
+```bash
+resend login --key "$RESEND_API_KEY"
+```
+
+Agents should run this whenever `resend doctor --json` reports the
+`API Key` check as anything other than `pass`.
+
 ## Usage
 
 The skill does not ship a wrapper script — the CLI **is** the tool.

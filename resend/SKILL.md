@@ -38,6 +38,39 @@ the JSON it prints on stdout.
 3. (Optional) `RESEND_PROFILE` if the operator manages multiple Resend
    teams via `resend auth switch`.
 
+## Logging in non-interactively
+
+Before running any other Resend command, the agent must ensure the CLI
+is authenticated. The credentials file `~/.config/resend/credentials.json`
+is what `resend login` writes — without it (or without `RESEND_API_KEY`
+in the env), every call returns `auth_error`.
+
+Check the connection first:
+
+```bash
+resend doctor --json
+```
+
+If the `API Key` check is **not** `pass` (or you see `auth_error` from
+any command), log in non-interactively using the key — **do not** open
+the browser flow, that requires a TTY:
+
+```bash
+resend login --key "$RESEND_API_KEY"
+```
+
+Rules:
+
+- Always pass the key via `--key`. The bare `resend login` opens a
+  browser and blocks on user input, which fails in agent contexts.
+- Never echo or log the key value. Pass it through the env var
+  (`"$RESEND_API_KEY"`); do not interpolate the literal `re_...` string
+  into shell history or transcripts.
+- If `RESEND_API_KEY` itself is unset, stop and ask the operator —
+  there is nothing to log in with.
+- After `resend login --key`, re-run `resend doctor --json` to confirm
+  `API Key: pass` before proceeding.
+
 ## How the CLI behaves with agents
 
 - Stdout is **success JSON only** when stdout is not a TTY (pipes, CI,
@@ -50,7 +83,8 @@ the JSON it prints on stdout.
 
 Before any first email send, **always run** `resend doctor --json` and
 verify:
-- `API Key` check is `pass`
+- `API Key` check is `pass` — if not, run `resend login --key "$RESEND_API_KEY"`
+  (see "Logging in non-interactively" above) and re-check.
 - `Domains` check shows at least one verified domain whose name matches
   the `--from` address you intend to use
 
