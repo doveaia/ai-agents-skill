@@ -10,5 +10,6 @@ start), and any supporting scripts.
 | Skill | What it does | Path |
 | --- | --- | --- |
 | `image-generation` | Generate PNG images from a text prompt via any OpenAI-compatible image endpoint (official OpenAI, Azure AI Foundry, or any other provider). Default model: `gpt-image-2`. | [`image-generation/`](./image-generation/) |
+| `resend` | Send transactional emails, manage domains, audiences, contacts, broadcasts, API keys, and webhooks via the official [Resend CLI](https://resend.com/changelog/cli). | [`resend/`](./resend/) |
 
 For setup, environment variables, and usage, see each skill's `README.md`.
