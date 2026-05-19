@@ -1,0 +1,14 @@
+# Generated test images
+image-generation/test-output*.png
+image-generation/output*.png
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Editor / OS
+.DS_Store
+.idea/
+.vscode/
