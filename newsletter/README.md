@@ -22,7 +22,7 @@ No external CLI to install — the skill uses the agent's built-in
 
 | Variable | Required | Description |
 | --- | --- | --- |
-| `NEWSLETTER_SOURCES` | yes | Competitor newsletter URLs. Newline- or comma-separated. Optional `Name <https://url>` syntax is supported (label is kept for the report, URL is used for fetching). |
+| `NEWSLETTER_SOURCES` | yes | Competitor newsletter URLs, **comma-separated**. Optional `Name <https://url>` syntax is supported (label is kept for the report, URL is used for fetching). |
 | `NEWSLETTER_VOICE_SAMPLE_COUNT` | no | Past drafts to read for voice cloning. Defaults to `5`. `0` disables voice analysis. |
 
 The **drafts directory** (where past newsletters live and where new
@@ -30,12 +30,8 @@ drafts are written) is supplied by the calling agent or operator at
 invocation time — not via an env var.
 
 ```bash
-# Minimum config
-export NEWSLETTER_SOURCES="https://sahilbloom.com/newsletter
-https://thedankoe.com/newsletter
-https://www.petergyang.com/newsletter
-https://www.alexandruburlacu.com/newsletter
-https://every.to"
+# Minimum config — comma-separated URLs
+export NEWSLETTER_SOURCES="https://sahilbloom.com/newsletter,https://thedankoe.com/newsletter,https://www.petergyang.com/newsletter,https://www.alexandruburlacu.com/newsletter,https://every.to"
 
 # Optional
 export NEWSLETTER_VOICE_SAMPLE_COUNT=5

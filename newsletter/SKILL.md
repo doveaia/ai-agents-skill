@@ -3,10 +3,10 @@ name: newsletter
 description: >
   Research competitor newsletters and generate a publication-ready draft
   in the operator's voice. The competitor list comes from the
-  NEWSLETTER_SOURCES environment variable (newline- or comma-separated
-  URLs). The agent fetches recent issues, identifies trending topics and
-  coverage gaps, learns the operator's voice from past drafts, then
-  writes a complete dated draft to disk. Use when the operator asks to
+  NEWSLETTER_SOURCES environment variable (comma-separated URLs). The
+  agent fetches recent issues, identifies trending topics and coverage
+  gaps, learns the operator's voice from past drafts, then writes a
+  complete dated draft to disk. Use when the operator asks to
   "research the newsletter market", "draft this week's issue", or
   "find what competitors are writing about". Do NOT use for: sending the
   newsletter (delegate to the `resend` skill), one-off blog posts,
@@ -33,7 +33,7 @@ runs using its standard tools (`WebFetch`, `Read`, `Glob`, `Write`).
 
 | Variable | Required | Description |
 | --- | --- | --- |
-| `NEWSLETTER_SOURCES` | yes | Competitor newsletter URLs the skill fetches. Newline- *or* comma-separated. Each entry is either a bare URL or `Name <https://url>` (the human label is ignored for fetching but kept in the research notes). |
+| `NEWSLETTER_SOURCES` | yes | Competitor newsletter URLs the skill fetches. **Comma-separated.** Each entry is either a bare URL or `Name <https://url>` (the human label is ignored for fetching but kept in the research notes). |
 | `NEWSLETTER_VOICE_SAMPLE_COUNT` | no | How many past drafts to read for voice analysis. Defaults to `5`. Set to `0` to skip voice analysis (the draft will use a neutral newsletter tone — flag this in the report). |
 
 The **drafts directory** (where past newsletters live AND where new
@@ -48,31 +48,29 @@ competitor list.
 
 ### Parsing `NEWSLETTER_SOURCES`
 
-The variable is line-tolerant. Treat both forms as equivalent:
+The variable is a single line of **comma-separated** URLs:
 
 ```bash
-# Newline-separated
-export NEWSLETTER_SOURCES="https://sahilbloom.com/newsletter
-https://thedankoe.com/newsletter
-https://www.petergyang.com/newsletter"
-
-# Comma-separated
-export NEWSLETTER_SOURCES="https://sahilbloom.com/newsletter,https://thedankoe.com/newsletter"
+# Bare URLs
+export NEWSLETTER_SOURCES="https://sahilbloom.com/newsletter,https://thedankoe.com/newsletter,https://www.petergyang.com/newsletter"
 
 # Labelled (human label dropped before fetching)
-export NEWSLETTER_SOURCES="Sahil Bloom <https://sahilbloom.com/newsletter>
-Dan Koe <https://thedankoe.com/newsletter>"
+export NEWSLETTER_SOURCES="Sahil Bloom <https://sahilbloom.com/newsletter>,Dan Koe <https://thedankoe.com/newsletter>"
 ```
 
 Extraction rule:
 
-1. Split on newlines AND commas.
+1. Split on `,`.
 2. Strip whitespace from each entry.
 3. If an entry matches `Name <URL>`, keep `URL` for fetching and `Name`
    for the report. Otherwise the bare URL is both.
 4. Drop empties and any entry that does not parse as `http(s)://…`.
 5. If fewer than 2 valid URLs remain, stop and tell the operator the
    list is too short.
+
+If the operator hands you a multi-line list (newlines instead of
+commas), don't silently reinterpret — surface the format error and
+ask them to re-export with commas.
 
 ## Working process
 
