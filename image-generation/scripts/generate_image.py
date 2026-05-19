@@ -1,14 +1,26 @@
 #!/usr/bin/env python3
 """Generate PNG images via any OpenAI-compatible image endpoint.
 
-This is the canonical entry point referenced by SKILL.md. The script uses
-the standard OpenAI SDK environment variables so it works against the
-official OpenAI API, Azure AI Foundry, or any other OpenAI-compatible
-provider without code changes:
+This is the canonical entry point referenced by SKILL.md. The script
+reads its config from one of two env-var namespaces:
 
-- OPENAI_API_KEY       — API key for the provider
-- OPENAI_BASE_URL      — base URL of the OpenAI-compatible endpoint
-- OPENAI_IMAGE_MODEL   — model / deployment name (default: gpt-image-2)
+  Primary (standard OpenAI SDK names):
+    OPENAI_API_KEY
+    OPENAI_BASE_URL
+    OPENAI_IMAGE_MODEL    (optional, default: gpt-image-2)
+
+  Image-scoped override (avoids clashing with other tools that already
+  use OPENAI_API_KEY for api.openai.com):
+    OPENAI_IMAGE_API_KEY
+    OPENAI_IMAGE_BASE_URL
+    OPENAI_IMAGE_MODEL    (optional, default: gpt-image-2)
+
+The two namespaces are resolved atomically: if either
+OPENAI_IMAGE_API_KEY or OPENAI_IMAGE_BASE_URL is set, the script uses
+the OPENAI_IMAGE_* bundle (and errors if its counterpart is missing).
+Otherwise it uses OPENAI_API_KEY + OPENAI_BASE_URL. Namespaces are never
+mixed, so a key from one provider can never accidentally pair with the
+base URL of another.
 """
 
 from __future__ import annotations
@@ -23,6 +35,42 @@ from openai import OpenAI
 
 DEFAULT_IMAGE_MODEL = "gpt-image-2"
 SUPPORTED_SIZES = {"1024x1024", "1024x1536", "1536x1024"}
+
+
+def resolve_credentials() -> tuple[str | None, str | None, str | None]:
+    """Resolve (api_key, base_url, error_message).
+
+    If either OPENAI_IMAGE_API_KEY or OPENAI_IMAGE_BASE_URL is set, the
+    OPENAI_IMAGE_* bundle is used and the script errors if its
+    counterpart is missing. Otherwise the standard OPENAI_API_KEY /
+    OPENAI_BASE_URL bundle is used. Namespaces are never mixed.
+    """
+    image_key = os.getenv("OPENAI_IMAGE_API_KEY")
+    image_url = os.getenv("OPENAI_IMAGE_BASE_URL")
+
+    if image_key or image_url:
+        if not image_key:
+            return None, None, (
+                "OPENAI_IMAGE_BASE_URL is set but OPENAI_IMAGE_API_KEY is not. "
+                "Set both, or unset both to fall back to the OPENAI_* namespace."
+            )
+        if not image_url:
+            return None, None, (
+                "OPENAI_IMAGE_API_KEY is set but OPENAI_IMAGE_BASE_URL is not. "
+                "Set both, or unset both to fall back to the OPENAI_* namespace."
+            )
+        return image_key, image_url, None
+
+    api_key = os.getenv("OPENAI_API_KEY")
+    base_url = os.getenv("OPENAI_BASE_URL")
+    if not api_key or not base_url:
+        missing = []
+        if not api_key:
+            missing.append("OPENAI_API_KEY (or OPENAI_IMAGE_API_KEY)")
+        if not base_url:
+            missing.append("OPENAI_BASE_URL (or OPENAI_IMAGE_BASE_URL)")
+        return None, None, "Missing required env var(s): " + ", ".join(missing)
+    return api_key, base_url, None
 
 
 def parse_args() -> argparse.Namespace:
@@ -71,22 +119,9 @@ def output_path_for(base: Path, index: int, total: int) -> Path:
 def main() -> int:
     args = parse_args()
 
-    api_key = os.getenv("OPENAI_API_KEY")
-    if not api_key:
-        print(
-            "ERROR: OPENAI_API_KEY is not set. Export it before running this script.",
-            file=sys.stderr,
-        )
-        return 2
-
-    base_url = os.getenv("OPENAI_BASE_URL")
-    if not base_url:
-        print(
-            "ERROR: OPENAI_BASE_URL is not set. Export the OpenAI-compatible base URL "
-            "of your provider (e.g. https://api.openai.com/v1 for OpenAI, or "
-            "https://<resource-name>.services.ai.azure.com/openai/v1 for Azure AI Foundry).",
-            file=sys.stderr,
-        )
+    api_key, base_url, err = resolve_credentials()
+    if err:
+        print(f"ERROR: {err}", file=sys.stderr)
         return 2
 
     if args.n < 1:

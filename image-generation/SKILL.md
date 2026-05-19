@@ -53,6 +53,23 @@ description, including:
    | `OPENAI_BASE_URL` | yes | Base URL of the OpenAI-compatible Images endpoint, e.g. `https://api.openai.com/v1` (official OpenAI) or `https://<resource>.services.ai.azure.com/openai/v1` (Azure AI Foundry). |
    | `OPENAI_IMAGE_MODEL` | no | Image model / deployment name. Defaults to `gpt-image-2`; override via this env var or `--model`. |
 
+   **Image-scoped override.** To avoid clashing with other tools that
+   already use `OPENAI_API_KEY` (e.g. tools that hit api.openai.com
+   directly), the script also accepts an image-scoped bundle:
+
+   | Variable | Replaces |
+   | --- | --- |
+   | `OPENAI_IMAGE_API_KEY` | `OPENAI_API_KEY` |
+   | `OPENAI_IMAGE_BASE_URL` | `OPENAI_BASE_URL` |
+
+   Resolution is **atomic**: if either `OPENAI_IMAGE_API_KEY` or
+   `OPENAI_IMAGE_BASE_URL` is set, the script uses the `OPENAI_IMAGE_*`
+   bundle and errors when its counterpart is missing. Otherwise it falls
+   back to `OPENAI_API_KEY` + `OPENAI_BASE_URL`. The two namespaces are
+   never mixed, so a key from one provider can never accidentally pair
+   with the base URL of another. `OPENAI_IMAGE_MODEL` is shared by both
+   modes.
+
 ## Usage
 
 Run the helper script with the prompt and the desired output path:
