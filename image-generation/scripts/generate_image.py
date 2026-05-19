@@ -1,10 +1,14 @@
 #!/usr/bin/env python3
-"""Generate PNG images via an Azure AI Foundry image deployment.
+"""Generate PNG images via any OpenAI-compatible image endpoint.
 
-This is the canonical entry point referenced by SKILL.md. Endpoint and
-API key come from the AZURE_AI_FOUNDRY_ENDPOINT and AZURE_AI_FOUNDRY_API_KEY
-environment variables; the deployment name defaults to gpt-image-2 but can
-be overridden via AZURE_AI_FOUNDRY_DEPLOYMENT or --deployment.
+This is the canonical entry point referenced by SKILL.md. The script uses
+the standard OpenAI SDK environment variables so it works against the
+official OpenAI API, Azure AI Foundry, or any other OpenAI-compatible
+provider without code changes:
+
+- OPENAI_API_KEY       — API key for the provider
+- OPENAI_BASE_URL      — base URL of the OpenAI-compatible endpoint
+- OPENAI_IMAGE_MODEL   — model / deployment name (default: gpt-image-2)
 """
 
 from __future__ import annotations
@@ -17,13 +21,13 @@ from pathlib import Path
 
 from openai import OpenAI
 
-DEFAULT_DEPLOYMENT_NAME = "gpt-image-2"
+DEFAULT_IMAGE_MODEL = "gpt-image-2"
 SUPPORTED_SIZES = {"1024x1024", "1024x1536", "1536x1024"}
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Generate PNG images from a text prompt using Azure AI Foundry gpt-image-2.",
+        description="Generate PNG images from a text prompt via any OpenAI-compatible endpoint.",
     )
     parser.add_argument(
         "--prompt",
@@ -48,11 +52,11 @@ def parse_args() -> argparse.Namespace:
         help="Number of images to generate (default: 1).",
     )
     parser.add_argument(
-        "--deployment",
-        default=os.getenv("AZURE_AI_FOUNDRY_DEPLOYMENT", DEFAULT_DEPLOYMENT_NAME),
+        "--model",
+        default=os.getenv("OPENAI_IMAGE_MODEL", DEFAULT_IMAGE_MODEL),
         help=(
-            "Azure AI Foundry deployment name (default: $AZURE_AI_FOUNDRY_DEPLOYMENT "
-            f"or '{DEFAULT_DEPLOYMENT_NAME}')."
+            "Image model / deployment name (default: $OPENAI_IMAGE_MODEL "
+            f"or '{DEFAULT_IMAGE_MODEL}')."
         ),
     )
     return parser.parse_args()
@@ -67,20 +71,20 @@ def output_path_for(base: Path, index: int, total: int) -> Path:
 def main() -> int:
     args = parse_args()
 
-    api_key = os.getenv("AZURE_AI_FOUNDRY_API_KEY")
+    api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
         print(
-            "ERROR: AZURE_AI_FOUNDRY_API_KEY is not set. Export it before running this script.",
+            "ERROR: OPENAI_API_KEY is not set. Export it before running this script.",
             file=sys.stderr,
         )
         return 2
 
-    endpoint = os.getenv("AZURE_AI_FOUNDRY_ENDPOINT")
-    if not endpoint:
+    base_url = os.getenv("OPENAI_BASE_URL")
+    if not base_url:
         print(
-            "ERROR: AZURE_AI_FOUNDRY_ENDPOINT is not set. Export the OpenAI v1 base URL "
-            "for your Azure AI Foundry resource (e.g. "
-            "https://<resource-name>.services.ai.azure.com/openai/v1).",
+            "ERROR: OPENAI_BASE_URL is not set. Export the OpenAI-compatible base URL "
+            "of your provider (e.g. https://api.openai.com/v1 for OpenAI, or "
+            "https://<resource-name>.services.ai.azure.com/openai/v1 for Azure AI Foundry).",
             file=sys.stderr,
         )
         return 2
@@ -89,11 +93,11 @@ def main() -> int:
         print("ERROR: --n must be >= 1", file=sys.stderr)
         return 2
 
-    client = OpenAI(base_url=endpoint, api_key=api_key)
+    client = OpenAI(base_url=base_url, api_key=api_key)
 
     try:
         response = client.images.generate(
-            model=args.deployment,
+            model=args.model,
             prompt=args.prompt,
             n=args.n,
             size=args.size,

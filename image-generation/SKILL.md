@@ -1,23 +1,25 @@
 ---
 name: image-generation
 description: >
-  Generate PNG images from a text prompt using an Azure AI Foundry image
-  deployment (default: gpt-image-2) via the OpenAI Python SDK. Use when the
+  Generate PNG images from a text prompt via any OpenAI-compatible image
+  endpoint (official OpenAI API, Azure AI Foundry, or any other provider
+  exposing the same Images API). Default model: gpt-image-2. Use when the
   agent needs to create illustrations, marketing visuals, thumbnails,
   mockups, icons, social media images, or any other raster image from a
   textual description. Do NOT use for: editing existing images, vector
-  graphics (SVG), video, or audio. Do NOT use if the
-  AZURE_AI_FOUNDRY_API_KEY or AZURE_AI_FOUNDRY_ENDPOINT environment
-  variables are not set — request them from the operator first.
+  graphics (SVG), video, or audio. Do NOT use if the OPENAI_API_KEY or
+  OPENAI_BASE_URL environment variables are not set — request them from
+  the operator first.
 ---
 
-# Image Generation (Azure AI Foundry)
+# Image Generation (OpenAI-compatible)
 
-This skill produces a PNG file from a text prompt using an image
-deployment hosted on Azure AI Foundry (default deployment: `gpt-image-2`).
-Agents should invoke the helper script `scripts/generate_image.py` rather
-than hand-rolling the API call, so that endpoint, model name, and decoding
-logic stay consistent.
+This skill produces a PNG file from a text prompt via any OpenAI-compatible
+Images endpoint — official OpenAI API, Azure AI Foundry, or any other
+provider implementing the same interface. The default model is
+`gpt-image-2`. Agents should invoke the helper script
+`scripts/generate_image.py` rather than hand-rolling the API call, so the
+base URL, model, and decoding logic stay consistent.
 
 ## When to use
 
@@ -41,22 +43,25 @@ description, including:
 
 1. `python3` available on the runtime.
 2. The `openai` package installed (`pip install openai`).
-3. The following environment variables exported. If any are missing, stop
-   and ask the operator — **never hard-code secrets or endpoint URLs**.
+3. The following environment variables exported. If any required one is
+   missing, stop and ask the operator — **never hard-code secrets or
+   endpoint URLs**.
 
    | Variable | Required | Description |
    | --- | --- | --- |
-   | `AZURE_AI_FOUNDRY_API_KEY` | yes | API key for the Azure AI Foundry resource. |
-   | `AZURE_AI_FOUNDRY_ENDPOINT` | yes | Base URL of the OpenAI-compatible endpoint, e.g. `https://<resource-name>.services.ai.azure.com/openai/v1`. |
-   | `AZURE_AI_FOUNDRY_DEPLOYMENT` | no | Image deployment name. Defaults to `gpt-image-2`; override via this env var or `--deployment`. |
+   | `OPENAI_API_KEY` | yes | API key for your OpenAI-compatible provider. |
+   | `OPENAI_BASE_URL` | yes | Base URL of the OpenAI-compatible Images endpoint, e.g. `https://api.openai.com/v1` (official OpenAI) or `https://<resource>.services.ai.azure.com/openai/v1` (Azure AI Foundry). |
+   | `OPENAI_IMAGE_MODEL` | no | Image model / deployment name. Defaults to `gpt-image-2`; override via this env var or `--model`. |
 
 ## Usage
 
 Run the helper script with the prompt and the desired output path:
 
 ```bash
-export AZURE_AI_FOUNDRY_API_KEY="…"
-export AZURE_AI_FOUNDRY_ENDPOINT="https://<resource-name>.services.ai.azure.com/openai/v1"
+export OPENAI_API_KEY="…"
+export OPENAI_BASE_URL="https://api.openai.com/v1"
+# Optional:
+# export OPENAI_IMAGE_MODEL="gpt-image-2"
 
 python3 scripts/generate_image.py \
   --prompt "A cute baby polar bear" \
@@ -72,8 +77,8 @@ Arguments:
   `1024x1024`, `1024x1536` (portrait), `1536x1024` (landscape).
 - `--n` (optional, default `1`) — number of images. When `n > 1`, the script
   appends `-1`, `-2`, … before the file extension.
-- `--deployment` (optional) — Azure AI Foundry deployment name. Defaults to
-  `$AZURE_AI_FOUNDRY_DEPLOYMENT`, then `gpt-image-2`.
+- `--model` (optional) — image model / deployment name. Defaults to
+  `$OPENAI_IMAGE_MODEL`, then `gpt-image-2`.
 
 The script exits non-zero with a clear error message if any required env
 var is missing, the API call fails, or the output cannot be written.
@@ -81,26 +86,27 @@ var is missing, the API call fails, or the output cannot be written.
 ## Canonical Python implementation
 
 The script `scripts/generate_image.py` mirrors this canonical snippet,
-which is the source of truth for the API call. Endpoint, API key, and
-deployment all come from environment variables so this skill stays
-publishable (no secrets or tenant-specific URLs in the repo).
+which is the source of truth for the API call. Base URL, API key, and
+model all come from environment variables so this skill stays publishable
+(no secrets or tenant-specific URLs in the repo) and works against any
+OpenAI-compatible provider.
 
 ```python
 import base64
 import os
 from openai import OpenAI
 
-endpoint = os.environ["AZURE_AI_FOUNDRY_ENDPOINT"]
-api_key = os.environ["AZURE_AI_FOUNDRY_API_KEY"]
-deployment_name = os.getenv("AZURE_AI_FOUNDRY_DEPLOYMENT", "gpt-image-2")
+base_url = os.environ["OPENAI_BASE_URL"]
+api_key = os.environ["OPENAI_API_KEY"]
+model = os.getenv("OPENAI_IMAGE_MODEL", "gpt-image-2")
 
 client = OpenAI(
-    base_url=endpoint,
+    base_url=base_url,
     api_key=api_key,
 )
 
 img = client.images.generate(
-    model=deployment_name,
+    model=model,
     prompt="A cute baby polar bear",
     n=1,
     size="1024x1024",

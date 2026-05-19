@@ -8,11 +8,11 @@ Doveaia AI agents. Each skill lives in its own directory containing a
 
 | Skill | Description |
 | --- | --- |
-| [`image-generation/`](./image-generation/SKILL.md) | Generate PNG images from a text prompt using an Azure AI Foundry image deployment (default: `gpt-image-2`) via the OpenAI Python SDK. |
+| [`image-generation/`](./image-generation/SKILL.md) | Generate PNG images from a text prompt via any OpenAI-compatible image endpoint (official OpenAI, Azure AI Foundry, or any other provider). Default model: `gpt-image-2`. |
 
 ## Environment variables
 
-Skills in this repo read all credentials and tenant-specific endpoints
+Skills in this repo read all credentials and provider-specific endpoints
 from environment variables — **no secrets or tenant URLs are committed**.
 Export the relevant variables for the skills you intend to use.
 
@@ -20,17 +20,29 @@ Export the relevant variables for the skills you intend to use.
 
 | Variable | Required | Description |
 | --- | --- | --- |
-| `AZURE_AI_FOUNDRY_API_KEY` | yes | API key for your Azure AI Foundry resource. |
-| `AZURE_AI_FOUNDRY_ENDPOINT` | yes | OpenAI-compatible base URL of your Azure AI Foundry resource, e.g. `https://<your-resource-name>.services.ai.azure.com/openai/v1`. |
-| `AZURE_AI_FOUNDRY_DEPLOYMENT` | no | Image deployment name. Defaults to `gpt-image-2`. Can also be overridden per-call via `--deployment`. |
+| `OPENAI_API_KEY` | yes | API key for your OpenAI-compatible provider. |
+| `OPENAI_BASE_URL` | yes | Base URL of the OpenAI-compatible Images endpoint (see examples below). |
+| `OPENAI_IMAGE_MODEL` | no | Image model / deployment name. Defaults to `gpt-image-2`. Can also be overridden per-call via `--model`. |
 
-Example:
+Examples — set `OPENAI_BASE_URL` to whichever provider you use:
 
 ```bash
-export AZURE_AI_FOUNDRY_API_KEY="…"
-export AZURE_AI_FOUNDRY_ENDPOINT="https://<your-resource-name>.services.ai.azure.com/openai/v1"
+# Official OpenAI
+export OPENAI_BASE_URL="https://api.openai.com/v1"
+
+# Azure AI Foundry (OpenAI v1 compatibility surface)
+export OPENAI_BASE_URL="https://<your-resource-name>.services.ai.azure.com/openai/v1"
+
+# Any other OpenAI-compatible provider
+export OPENAI_BASE_URL="https://<provider-host>/v1"
+```
+
+Then:
+
+```bash
+export OPENAI_API_KEY="…"
 # Optional:
-# export AZURE_AI_FOUNDRY_DEPLOYMENT="gpt-image-2"
+# export OPENAI_IMAGE_MODEL="gpt-image-2"
 ```
 
 To persist these for future shells, add the `export` lines to your
